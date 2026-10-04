@@ -4,6 +4,8 @@ A tiny macOS menu bar app that clears the extra Claude icons a subagent swarm le
 
 The pinned Claude icon stays. This app has no Dock icon of its own. No settings window, no network access, no dependencies. One Swift file.
 
+![Claude Dock Clean in the menu bar](docs/screenshot.png)
+
 ## Features
 
 - Menu bar icon shows how many Claude Dock icons are stuck past the first one
