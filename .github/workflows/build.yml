@@ -110,7 +110,7 @@ jobs:
           sha="$(shasum -a 256 "$APP.zip" | cut -d ' ' -f 1)"
           tap="$RUNNER_TEMP/homebrew-tap"
           git clone --depth 1 \
-            "https://x-access-token:$HOMEBREW_TAP_TOKEN@github.com/AndreCamm/homebrew-tap.git" "$tap"
+            "https://x-access-token:$HOMEBREW_TAP_TOKEN@github.com/ndre-dev/homebrew-tap.git" "$tap"
           sed -i '' -E \
             -e "s/^  version \".*\"$/  version \"$version\"/" \
             -e "s/^  sha256 \".*\"$/  sha256 \"$sha\"/" \

@@ -18,14 +18,14 @@ The pinned Claude icon stays. This app has no Dock icon of its own. No settings 
 ### Homebrew
 
 ```
-brew install andrecamm/tap/unghost
+brew install ndre-dev/tap/unghost
 ```
 
 Homebrew puts `Unghost.app` in your Applications folder and clears the quarantine flag, so it opens without a Gatekeeper prompt. Run `brew upgrade` to update it.
 
 ### Download
 
-1. Grab `Unghost.zip` from the [latest release](https://github.com/AndreCamm/Unghost/releases/latest) and unzip it.
+1. Grab `Unghost.zip` from the [latest release](https://github.com/ndre-dev/Unghost/releases/latest) and unzip it.
 2. Move `Unghost.app` to your Applications folder.
 3. Open it. The app isn't notarised by Apple, so the first time macOS will block it. Go to **System Settings, Privacy & Security**, scroll down and click **Open Anyway**. Alternatively, run:
 
@@ -38,7 +38,7 @@ Homebrew puts `Unghost.app` in your Applications folder and clears the quarantin
 You need Xcode or the Command Line Tools (`xcode-select --install`).
 
 ```
-git clone https://github.com/AndreCamm/Unghost.git
+git clone https://github.com/ndre-dev/Unghost.git
 cd Unghost
 ./build.sh
 cp -r build/Unghost.app /Applications/
@@ -76,7 +76,7 @@ Changing the process type (UI element, background only) does not work. The Dock 
 Camera, microphone and audio output inside the browser do not depend on the registration. They were tested with `getUserMedia` and `AudioContext` before and after the change, with the same result.
 
 ```
-git clone https://github.com/AndreCamm/Unghost.git
+git clone https://github.com/ndre-dev/Unghost.git
 python3 Unghost/guard/patch.py --install
 ```
 
@@ -101,7 +101,7 @@ Push a tag such as `v1.4.0`. The Build workflow then:
 1. Builds the universal app with that version.
 2. Signs and notarises it, when the Developer ID secrets are set.
 3. Publishes `Unghost.zip` to a GitHub release.
-4. Updates the cask in [AndreCamm/homebrew-tap](https://github.com/AndreCamm/homebrew-tap), when `HOMEBREW_TAP_TOKEN` is set.
+4. Updates the cask in [ndre-dev/homebrew-tap](https://github.com/ndre-dev/homebrew-tap), when `HOMEBREW_TAP_TOKEN` is set.
 
 | Secret | What it is |
 |---|---|
