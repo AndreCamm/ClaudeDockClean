@@ -1,10 +1,10 @@
-# Claude Dock Clean
+# Unghost
 
 A tiny macOS menu bar app that clears the extra Claude icons a subagent swarm leaves in the Dock.
 
 The pinned Claude icon stays. This app has no Dock icon of its own. No settings window, no network access, no dependencies. One Swift file.
 
-![Claude Dock Clean in the menu bar](docs/screenshot.png)
+![Unghost in the menu bar](docs/screenshot.png)
 
 ## Features
 
@@ -17,12 +17,12 @@ The pinned Claude icon stays. This app has no Dock icon of its own. No settings 
 
 ### Download
 
-1. Grab `ClaudeDockClean.zip` from the [latest release](https://github.com/AndreCamm/ClaudeDockClean/releases/latest) and unzip it.
-2. Move `ClaudeDockClean.app` to your Applications folder.
+1. Grab `Unghost.zip` from the [latest release](https://github.com/AndreCamm/Unghost/releases/latest) and unzip it.
+2. Move `Unghost.app` to your Applications folder.
 3. Open it. The app isn't notarised by Apple, so the first time macOS will block it. Go to **System Settings, Privacy & Security**, scroll down and click **Open Anyway**. Alternatively, run:
 
    ```
-   xattr -dr com.apple.quarantine /Applications/ClaudeDockClean.app
+   xattr -dr com.apple.quarantine /Applications/Unghost.app
    ```
 
 ### Build from source
@@ -30,11 +30,11 @@ The pinned Claude icon stays. This app has no Dock icon of its own. No settings 
 You need Xcode or the Command Line Tools (`xcode-select --install`).
 
 ```
-git clone https://github.com/AndreCamm/ClaudeDockClean.git
-cd ClaudeDockClean
+git clone https://github.com/AndreCamm/Unghost.git
+cd Unghost
 ./build.sh
-cp -r build/ClaudeDockClean.app /Applications/
-open /Applications/ClaudeDockClean.app
+cp -r build/Unghost.app /Applications/
+open /Applications/Unghost.app
 ```
 
 Apps you build yourself aren't quarantined, so there's no Gatekeeper prompt.
@@ -81,7 +81,7 @@ The proper fix belongs upstream: ship the headless shell inside a helper app bun
 
 ## Contributing
 
-Issues and pull requests are welcome. The whole app lives in [`Sources/ClaudeDockClean.swift`](Sources/ClaudeDockClean.swift), and the aim is to keep it small and single purpose.
+Issues and pull requests are welcome. The whole app lives in [`Sources/Unghost.swift`](Sources/Unghost.swift), and the aim is to keep it small and single purpose.
 
 ## License
 

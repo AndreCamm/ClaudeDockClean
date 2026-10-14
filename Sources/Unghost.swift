@@ -60,7 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(quit)
 
         statusItem.menu = menu
-        if let image = NSImage(systemSymbolName: "c.square", accessibilityDescription: "Claude Dock Clean") {
+        if let image = NSImage(systemSymbolName: "c.square", accessibilityDescription: "Unghost") {
             image.isTemplate = true
             statusItem.button?.image = image
             statusItem.button?.imagePosition = .imageLeading
