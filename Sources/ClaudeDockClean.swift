@@ -2,9 +2,30 @@ import AppKit
 import ApplicationServices
 import ServiceManagement
 
-/// Claude icons beyond the one pinned tile.
-func extraClaudeCount(_ total: Int) -> Int {
-    max(0, total - 1)
+/// How many Dock tiles of this name belong there.
+/// Claude Code is a background CLI, so every one of its tiles is extra.
+func dockAllowance(for title: String) -> Int? {
+    switch title {
+    case "Claude", "T3 Code", "T3 Code (Nightly)", "T3 Code (Alpha)":
+        return 1
+    case "Claude Code":
+        return 0
+    default:
+        if title.hasPrefix("T3 Code (") { return 1 }
+        return nil
+    }
+}
+
+struct DockTally {
+    var counts: [String: Int] = [:]
+
+    var total: Int { counts.values.reduce(0, +) }
+
+    var extras: Int {
+        counts.reduce(0) { partial, item in
+            partial + max(0, item.value - (dockAllowance(for: item.key) ?? item.value))
+        }
+    }
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
@@ -75,18 +96,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             applyCount(nil)
             return
         }
-        let total = claudeDockItemCount()
-        lastCount = total
-        applyCount(total)
+        let tally = dockTally()
+        lastCount = tally.extras
+        applyCount(tally.extras)
     }
 
     private func applyCount(_ total: Int?) {
-        let extras = total.map(extraClaudeCount)
+        let extras = total
         if let extras, extras > 0 {
             statusItem.button?.title = " \(extras)"
             countItem.title = extras == 1
-                ? "1 extra Claude icon"
-                : "\(extras) extra Claude icons"
+                ? "1 extra agent icon"
+                : "\(extras) extra agent icons"
             cleanItem.title = "Clean up"
         } else if total != nil {
             statusItem.button?.title = ""
@@ -156,25 +177,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 }
 
-func claudeDockItemCount() -> Int {
+func dockTally() -> DockTally {
     guard let dock = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").first else {
-        return 0
+        return DockTally()
     }
     let app = AXUIElementCreateApplication(dock.processIdentifier)
-    return countClaudeItems(in: app, depth: 0)
+    var tally = DockTally()
+    countAgentItems(in: app, depth: 0, into: &tally)
+    return tally
 }
 
-private func countClaudeItems(in element: AXUIElement, depth: Int) -> Int {
-    if depth > 6 { return 0 }
-    var found = 0
+private func countAgentItems(in element: AXUIElement, depth: Int, into tally: inout DockTally) {
+    if depth > 6 { return }
     if axString(element, kAXRoleAttribute) == "AXDockItem",
-       axString(element, kAXTitleAttribute) == "Claude" {
-        found = 1
+       let title = axString(element, kAXTitleAttribute),
+       dockAllowance(for: title) != nil {
+        tally.counts[title, default: 0] += 1
     }
     for child in axChildren(element) {
-        found += countClaudeItems(in: child, depth: depth + 1)
+        countAgentItems(in: child, depth: depth + 1, into: &tally)
     }
-    return found
 }
 
 private func axString(_ element: AXUIElement, _ attribute: String) -> String? {
@@ -215,8 +237,8 @@ if CommandLine.arguments.contains("--count") {
         fputs("untrusted\n", stderr)
         exit(2)
     }
-    let total = claudeDockItemCount()
-    print("\(total) \(extraClaudeCount(total))")
+    let tally = dockTally()
+    print("\(tally.total) \(tally.extras)")
     exit(0)
 }
 

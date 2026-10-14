@@ -4,3 +4,4 @@ Claude Dock Clean.app/
 .DS_Store
 .swiftpm/
 xcuserdata/
+__pycache__/

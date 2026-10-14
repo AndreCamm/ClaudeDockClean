@@ -49,11 +49,31 @@ Click the **C** in the menu bar, then **Clean up**. The Dock disappears for a mo
 
 **Quit.** Click the item and choose Quit.
 
-## Why the icons stick
+## Why the icons appear
 
-A Claude subagent swarm registers a Dock tile for each agent. The processes quit. The Dock keeps the tiles and still marks them as running. They are not part of the saved Dock layout. Restarting the Dock drops them.
+Agents in Claude and T3 Code launch `chrome-headless-shell`, the headless browser behind Playwright and T3's browser tool. That program has no app bundle. Launch Services files it, and every helper process it starts, under the app that launched it (Claude, T3 Code, Ghostty, Cursor).
 
-A normal Dock restart can write those ghost tiles into the layout before it quits. Clean up deletes the duplicate recent-app entries first, then restarts the Dock with `killall -9` so it cannot save them.
+The browser process registers as a UI element. Its audio and video capture helpers register too. On macOS 27 the Dock inserts a tile as soon as a second process registers under the parent, whatever type that process declares, and about half of those tiles are never removed. Each browser launch therefore leaves a "T3 Code" or "Claude" tile behind. An agent that opens a browser every few seconds fills the Dock in minutes.
+
+The tiles are not part of the saved Dock layout. Clean up deletes the duplicate recent-app entries, then restarts the Dock with `killall -9` so it cannot save them on the way down.
+
+Cleaning up does not stop the next swarm. The guard does.
+
+## Stop the tiles coming back
+
+A process with no Launch Services record cannot get a Dock tile. `guard/patch.py` renames each `chrome-headless-shell` to `chrome-headless-shell.real` and puts a small stand-in in its place. The stand-in loads `guard/chsguard.c` into the browser and runs the real binary with the same arguments. Inside every chrome child process (anything started with `--type=`) the library skips the Launch Services check-in. The browser process itself is left alone.
+
+Changing the process type (UI element, background only) does not work. The Dock inserts the tile before it looks at the type.
+
+Camera, microphone and audio output inside the browser do not depend on the registration. They were tested with `getUserMedia` and `AudioContext` before and after the change, with the same result.
+
+```
+python3 guard/patch.py --install
+```
+
+A login item wraps any new browser download under `~/.t3/tools` and `~/Library/Caches/ms-playwright`. The guard does not modify Claude Code or Codex. Loading a library into those binaries crashes Bun at startup. A browser that was already open when the guard was installed keeps its tiles until it exits.
+
+The proper fix belongs upstream: ship the headless shell inside a helper app bundle with `LSUIElement`, as every desktop Chromium build does, or disclaim responsibility for it when spawning.
 
 ## Requirements
 
