@@ -15,6 +15,14 @@ The pinned Claude icon stays. This app has no Dock icon of its own. No settings 
 
 ## Install
 
+### Homebrew
+
+```
+brew install andrecamm/tap/unghost
+```
+
+Homebrew puts `Unghost.app` in your Applications folder and clears the quarantine flag, so it opens without a Gatekeeper prompt. Run `brew upgrade` to update it.
+
 ### Download
 
 1. Grab `Unghost.zip` from the [latest release](https://github.com/AndreCamm/Unghost/releases/latest) and unzip it.
@@ -68,8 +76,11 @@ Changing the process type (UI element, background only) does not work. The Dock 
 Camera, microphone and audio output inside the browser do not depend on the registration. They were tested with `getUserMedia` and `AudioContext` before and after the change, with the same result.
 
 ```
-python3 guard/patch.py --install
+git clone https://github.com/AndreCamm/Unghost.git
+python3 Unghost/guard/patch.py --install
 ```
+
+If you already cloned the repository to build the app, run `guard/patch.py --install` from that clone instead. Keep the folder after you install the guard. The login item runs `patch.py` from it. If you move the folder, run `--install` again from the new place.
 
 A login item wraps any new browser download under `~/.t3/tools` and `~/Library/Caches/ms-playwright`. The guard does not modify Claude Code or Codex. Loading a library into those binaries crashes Bun at startup. A browser that was already open when the guard was installed keeps its tiles until it exits.
 
@@ -82,6 +93,24 @@ The proper fix belongs upstream: ship the headless shell inside a helper app bun
 ## Contributing
 
 Issues and pull requests are welcome. The whole app lives in [`Sources/Unghost.swift`](Sources/Unghost.swift), and the aim is to keep it small and single purpose.
+
+## Releasing
+
+Push a tag such as `v1.4.0`. The Build workflow then:
+
+1. Builds the universal app with that version.
+2. Signs and notarises it, when the Developer ID secrets are set.
+3. Publishes `Unghost.zip` to a GitHub release.
+4. Updates the cask in [AndreCamm/homebrew-tap](https://github.com/AndreCamm/homebrew-tap), when `HOMEBREW_TAP_TOKEN` is set.
+
+| Secret | What it is |
+|---|---|
+| `DEVELOPER_ID_P12` | The Developer ID Application certificate and key, exported as `.p12` and base64 encoded |
+| `DEVELOPER_ID_P12_PASSWORD` | The password of that `.p12` |
+| `NOTARY_KEY` | The contents of an App Store Connect API key (`.p8`) |
+| `NOTARY_KEY_ID` | The ID of that key |
+| `NOTARY_ISSUER_ID` | The issuer ID shown with App Store Connect API keys |
+| `HOMEBREW_TAP_TOKEN` | A fine-grained token with write access to the contents of `homebrew-tap` only |
 
 ## License
 

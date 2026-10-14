@@ -1,0 +1,126 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: write
+
+env:
+  APP: Unghost
+  CASK: unghost
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Signing, notarisation and the cask update each need secrets. Releases
+      # still build and publish without them.
+      - name: Check release secrets
+        id: secrets
+        env:
+          SIGN: ${{ secrets.DEVELOPER_ID_P12 != '' && secrets.NOTARY_KEY != '' }}
+          TAP: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+        run: |
+          echo "sign=$SIGN" >> "$GITHUB_OUTPUT"
+          echo "tap=$TAP" >> "$GITHUB_OUTPUT"
+
+      - name: Build universal app
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            export VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          ./build.sh
+
+      - name: Sign with Developer ID
+        if: startsWith(github.ref, 'refs/tags/') && steps.secrets.outputs.sign == 'true'
+        env:
+          DEVELOPER_ID_P12: ${{ secrets.DEVELOPER_ID_P12 }}
+          DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          password="$(uuidgen)"
+          printf '%s' "$DEVELOPER_ID_P12" | base64 --decode > "$RUNNER_TEMP/developer-id.p12"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security import "$RUNNER_TEMP/developer-id.p12" -k "$keychain" \
+            -P "$DEVELOPER_ID_P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s \
+            -k "$password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" \
+            "$HOME/Library/Keychains/login.keychain-db"
+          rm "$RUNNER_TEMP/developer-id.p12"
+
+          codesign --force --options runtime --timestamp \
+            --sign "Developer ID Application" "build/$APP.app"
+          codesign --verify --strict --verbose=2 "build/$APP.app"
+
+      - name: Notarise
+        if: startsWith(github.ref, 'refs/tags/') && steps.secrets.outputs.sign == 'true'
+        env:
+          NOTARY_KEY: ${{ secrets.NOTARY_KEY }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          key="$RUNNER_TEMP/notary-key.p8"
+          printf '%s' "$NOTARY_KEY" > "$key"
+          ditto -c -k --keepParent "build/$APP.app" "$RUNNER_TEMP/notarise.zip"
+          result="$(xcrun notarytool submit "$RUNNER_TEMP/notarise.zip" \
+            --key "$key" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID" \
+            --wait --output-format json)"
+          echo "$result"
+          if [[ "$(jq -r .status <<< "$result")" != "Accepted" ]]; then
+            xcrun notarytool log "$(jq -r .id <<< "$result")" \
+              --key "$key" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID"
+            exit 1
+          fi
+          rm "$key"
+
+          xcrun stapler staple "build/$APP.app"
+          spctl --assess --type execute --verbose=2 "build/$APP.app"
+
+      - name: Zip app
+        run: ditto -c -k --keepParent "build/$APP.app" "$APP.zip"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP }}
+          path: ${{ env.APP }}.zip
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.APP }}.zip
+          generate_release_notes: true
+
+      - name: Update Homebrew cask
+        if: startsWith(github.ref, 'refs/tags/') && steps.secrets.outputs.tap == 'true'
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          sha="$(shasum -a 256 "$APP.zip" | cut -d ' ' -f 1)"
+          tap="$RUNNER_TEMP/homebrew-tap"
+          git clone --depth 1 \
+            "https://x-access-token:$HOMEBREW_TAP_TOKEN@github.com/AndreCamm/homebrew-tap.git" "$tap"
+          sed -i '' -E \
+            -e "s/^  version \".*\"$/  version \"$version\"/" \
+            -e "s/^  sha256 \".*\"$/  sha256 \"$sha\"/" \
+            "$tap/Casks/$CASK.rb"
+          cd "$tap"
+          if git diff --quiet; then
+            echo "The cask is already at $version."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Update $CASK to $version"
+          git push
