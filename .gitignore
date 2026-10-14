@@ -1,5 +1,4 @@
 build/
-Claude Dock Clean.app/
 *.zip
 .DS_Store
 .swiftpm/
